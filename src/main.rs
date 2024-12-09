@@ -1,6 +1,10 @@
 use crate::component_creator::ComponentCreator;
+use crate::{component_creator::ComponentCreator, initializer::Initializer};
 
 mod component_creator;
+mod content_generators;
+mod dir_file_generators;
+mod initializer;
 mod string_case;
 
 fn main() {
@@ -19,8 +23,7 @@ fn main() {
             display_usage(tool_name);
         }
         "init" => {
-            // TODO
-            println!("initialize project directory")
+            Initializer::new(&args[2]).init();
         }
         "page" | "component" => {
             ComponentCreator::new(command, &args[2]).create_component_file();

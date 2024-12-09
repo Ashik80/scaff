@@ -1,0 +1,7 @@
+[package]
+name = "scaff"
+version = "0.1.0"
+authors = ["Ashikur Rahman <ashikurrahman020995@gmail.com>"]
+edition = "2021"
+
+[dependencies]

@@ -2,7 +2,10 @@ use core::panic;
 use std::path::Path;
 
 use crate::{
-    content_generators::{generate_component_js_content, generate_page_component_js_content},
+    content_generators::{
+        generate_component_css_content, generate_component_html_content,
+        generate_component_js_content, generate_page_component_js_content,
+    },
     dir_file_generators::scaffold_dir_file,
     string_case::StringConverter,
 };
@@ -22,27 +25,46 @@ impl ComponentCreator {
         }
     }
 
-    pub fn create_component_file(&self) {
+    pub fn create_component_files(&self) {
         let component_dir = Path::new("src")
             .join("component")
             .join(&self.component_name);
-        let js_file_name = format!("{}.js", self.component_name);
+        let html_file_name = format!("{}.html.js", self.component_name);
+        let js_file_name = format!("{}.component.js", self.component_name);
+        let css_file_name = format!("{}.styles.js", self.component_name);
+
+        let html_content = generate_component_html_content(&self.template_name);
         let js_content = generate_component_js_content(
             &self.component_name,
             &self.template_name,
             &self.class_name,
         );
+        let css_content = generate_component_css_content(&self.template_name);
+        let html_file_path =
+            match scaffold_dir_file(&component_dir, &html_file_name, html_content.as_bytes()) {
+                Ok(path) => path,
+                Err(e) => panic!("{}", e),
+            };
         let js_file_path =
             match scaffold_dir_file(&component_dir, &js_file_name, js_content.as_bytes()) {
+                Ok(path) => path,
+                Err(e) => panic!("{}", e),
+            };
+        let css_file_path =
+            match scaffold_dir_file(&component_dir, &css_file_name, css_content.as_bytes()) {
                 Ok(path) => path,
                 Err(e) => panic!("{}", e),
             };
 
         // Display files generated
         println!(
-            r#"Generated component file:
+            r#"Generated component files:
+    {}
+    {}
     {}"#,
-            js_file_path.display()
+            js_file_path.display(),
+            html_file_path.display(),
+            css_file_path.display()
         )
     }
 

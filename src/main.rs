@@ -1,6 +1,6 @@
+use axum::{response::Html, routing::get, Router};
+use css_builder::CSSBuilder;
 use std::{env, fs};
-
-use axum::{extract::Path, response::Html, routing::get, Router};
 use tokio::net::TcpListener;
 use tower_http::services::ServeDir;
 
@@ -8,6 +8,7 @@ use crate::{component_creator::ComponentCreator, initializer::Initializer};
 
 mod component_creator;
 mod content_generators;
+mod css_builder;
 mod dir_file_generators;
 mod initializer;
 mod string_case;
@@ -34,9 +35,10 @@ fn main() {
             ComponentCreator::new(&args[2]).create_page_files();
         }
         "component" => {
-            ComponentCreator::new(&args[2]).create_component_file();
+            ComponentCreator::new(&args[2]).create_component_files();
         }
         "run" => {
+            CSSBuilder::build_css();
             start_server();
         }
         _ => {
@@ -62,7 +64,6 @@ async fn start_server() {
         .nest_service("/styles", ServeDir::new("styles"))
         .nest_service("/src", ServeDir::new("src"))
         .route("/", get(index_page))
-        .route("/api/page/*path", get(handle_page_route))
         .fallback(index_page);
     let addr = format!(
         "127.0.0.1:{}",
@@ -82,15 +83,5 @@ async fn start_server() {
 
 async fn index_page() -> Html<String> {
     let html = fs::read_to_string("index.html").expect("failed to read file");
-    Html(html)
-}
-
-async fn handle_page_route(Path(mut path): Path<String>) -> Html<String> {
-    let page_path = format!("src/page/{}/{}.html", path, path);
-    let page_html = fs::read_to_string(page_path).expect("failed to read file");
-    if path == "home" {
-        path = "home-page".to_string();
-    }
-    let html = format!("<{}>{}</{}>", path, page_html, path);
     Html(html)
 }

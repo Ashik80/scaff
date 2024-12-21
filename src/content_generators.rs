@@ -63,6 +63,15 @@ body {
 "#
 }
 
+pub fn generate_style_sheet_from_css(template_name: &str, content: &str) -> String {
+    format!(
+        r#"export const {}StyleSheet = new CSSStyleSheet();
+{}StyleSheet.replaceSync(`{}`);
+"#,
+        template_name, template_name, content
+    )
+}
+
 pub fn generate_favicon_selector_content() -> &'static str {
     r#"const faviconLink = document.querySelector('link[rel="icon"]');
 
@@ -83,6 +92,24 @@ if (
   faviconLink.href = "assets/favicon-white.png";
 } else {
   faviconLink.href = "assets/favicon-dark.png";
+}
+"#
+}
+
+pub fn generate_component_element_class_content() -> &'static str {
+    r#"import { globalStyleSheet } from "../../styles/global.js";
+
+export class ComponentElement extends HTMLElement {
+  /**
+   * @param {HTMLTemplateElement} template
+   * @param {CSSStyleSheet[]} styleSheets
+   */
+  constructor(template, styleSheets) {
+    super();
+    this.attachShadow({ mode: "open" });
+    this.shadowRoot.appendChild(template.content.cloneNode(true));
+    this.shadowRoot.adoptedStyleSheets = [globalStyleSheet, ...styleSheets];
+  }
 }
 "#
 }
@@ -150,20 +177,47 @@ pub fn generate_component_js_content(
     class_name: &str,
 ) -> String {
     format!(
-        r#"const {}Template = document.createElement("template");
-{}Template.innerHTML = ``;
+        r#"import {{ {}Template }} from "./{}.html.js";
+import {{ {}StyleSheet }} from "./{}.styles.js";
+import {{ ComponentElement }} from "../../services/component-element.js";
 
-export class {} extends HTMLElement {{
+export class {} extends ComponentElement {{
   constructor() {{
-    super();
-    this.attachShadow({{ mode: 'open' }});
-    this.shadowRoot.appendChild({}Template.content.cloneNode(true));
+    super({}Template, [{}StyleSheet]);
   }}
 }}
 
 customElements.define("{}", {});
 "#,
-        template_name, template_name, class_name, template_name, component_name, class_name
+        template_name,
+        component_name,
+        template_name,
+        component_name,
+        class_name,
+        template_name,
+        template_name,
+        component_name,
+        class_name
+    )
+}
+
+pub fn generate_component_html_content(template_name: &str) -> String {
+    format!(
+        r#"export const {}Template = document.createElement("template");
+{}Template.innerHTML = `
+`;
+"#,
+        template_name, template_name,
+    )
+}
+
+pub fn generate_component_css_content(template_name: &str) -> String {
+    format!(
+        r#"export const {}StyleSheet = new CSSStyleSheet();
+{}StyleSheet.replaceSync(`
+`);
+"#,
+        template_name, template_name,
     )
 }
 
@@ -173,7 +227,7 @@ pub fn generate_page_component_js_content(
     class_name: &str,
 ) -> String {
     format!(
-        r#"import {{ PageElement }} from "../../services/shadow-dom.js";
+        r#"import {{ PageElement }} from "../../services/page-element.js";
 
 const {}Template = document.createElement("template");
 
@@ -194,34 +248,49 @@ pub fn generate_home_html_content() -> &'static str {
 "#
 }
 
-pub fn generate_home_css_content() -> &'static str {
-    r#":slotted(h1) {
-  color: red;
-}
-"#
-}
-
 pub fn generate_router_js_content() -> &'static str {
     r#"const main = document.querySelector("main");
 
 async function getPageFragment(route) {
   const normalizedRoute = route === "/" ? "home" : route.replace(/^\//, "");
-  const response = await fetch(`/api/page/${normalizedRoute}`);
+  const response = await fetch(
+    `/src/page/${normalizedRoute}/${normalizedRoute}.html`,
+  );
   if (!response.ok) {
     throw new Error(`Failed to load page: ${response.statusText}`);
   }
-  return response.text();
+  const componentName =
+    normalizedRoute === "home" ? "home-page" : normalizedRoute;
+  const html = await response.text();
+  return { componentName, html };
 }
 
 async function updatePage(route) {
   try {
+    changePageCssLink(route);
     changePageScript(route);
-    const html = await getPageFragment(route);
-    main.innerHTML = html;
+    const { componentName, html } = await getPageFragment(route);
+    const formatted = `<${componentName}>${html}</${componentName}>`;
+    main.innerHTML = formatted;
     history.pushState(route, "", route);
   } catch (error) {
     console.error("Error loading page:", error);
   }
+}
+
+function changePageCssLink(route) {
+  const pageCssId = "page-css";
+  const normalizedRoute = route === "/" ? "home" : route.replace(/^\//, "");
+  const cssLink = `src/page/${normalizedRoute}/${normalizedRoute}.css`;
+  const cssLinkTag = document.getElementById(pageCssId);
+  if (cssLinkTag) {
+    cssLinkTag.remove();
+  }
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.id = pageCssId;
+  link.href = cssLink;
+  document.head.appendChild(link);
 }
 
 function changePageScript(route) {

@@ -6,9 +6,10 @@ use std::{
 
 use crate::{
     content_generators::{
-        generate_favicon_selector_content, generate_global_css_content, generate_home_css_content,
-        generate_home_html_content, generate_html_content, generate_page_component_js_content,
-        generate_page_element_class_content, generate_router_js_content,
+        generate_component_element_class_content, generate_favicon_selector_content,
+        generate_global_css_content, generate_home_html_content, generate_html_content,
+        generate_page_component_js_content, generate_page_element_class_content,
+        generate_router_js_content,
     },
     dir_file_generators::scaffold_dir_file,
     string_case::StringConverter,
@@ -74,11 +75,23 @@ impl Initializer {
                 Err(e) => panic!("{}", e),
             };
 
-        // Generate shadow-dom.js
-        let shadow_dom_js_file = "shadow-dom.js";
-        let shadow_dom_js_content = generate_page_element_class_content().as_bytes();
-        let shadow_dom_path =
-            match scaffold_dir_file(&services_dir, shadow_dom_js_file, shadow_dom_js_content) {
+        // Generate component-element.js
+        let component_element_js_file = "component-element.js";
+        let component_element_js_content = generate_component_element_class_content().as_bytes();
+        let component_element_path = match scaffold_dir_file(
+            &services_dir,
+            component_element_js_file,
+            component_element_js_content,
+        ) {
+            Ok(path) => path,
+            Err(e) => panic!("{}", e),
+        };
+
+        // Generate page-element.js
+        let page_element_js_file = "page-element.js";
+        let page_element_js_content = generate_page_element_class_content().as_bytes();
+        let page_element_path =
+            match scaffold_dir_file(&services_dir, page_element_js_file, page_element_js_content) {
                 Ok(path) => path,
                 Err(e) => panic!("{}", e),
             };
@@ -101,9 +114,7 @@ impl Initializer {
                 Err(e) => panic!("{}", e),
             };
         let home_css_file_name = "home.css";
-        let home_css_content = generate_home_css_content().as_bytes();
-        let home_css_path = match scaffold_dir_file(&home_dir, home_css_file_name, home_css_content)
-        {
+        let home_css_path = match scaffold_dir_file(&home_dir, home_css_file_name, "".as_bytes()) {
             Ok(path) => path,
             Err(e) => panic!("{}", e),
         };
@@ -119,12 +130,14 @@ impl Initializer {
     {}
     {}
     {}
+    {}
     {}"#,
             html_filepath.display(),
             assets_dir.display(),
             styles_file_path.display(),
             favicon_selector_path.display(),
-            shadow_dom_path.display(),
+            component_element_path.display(),
+            page_element_path.display(),
             route_js_path.display(),
             home_html_path.display(),
             home_js_path.display(),
